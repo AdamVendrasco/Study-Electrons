@@ -36,39 +36,32 @@ h_ele_Rprod = TH1D('ele_Rprod','ele_Rprod', len(arrBins_R)-1, arrBins_R)  # mm
 #No BIB
 h_all_p = TH1D('h_all_p','All Particles PDGID, No BIB',300,0,2200)
 
-        #Neutrons
+#Neutrons
 h_pfo_neut_pT= TH1D("h_neut_pT","Neutron_pT",100,0,0.05)
 h_pfo_neut_eta =TH1D("h_neut_eta","Neutron_eta",200,0,0.05)
 h_pfo_neut_phi=TH1D("h_neut_phi","Neutron_phi",200,0,0.05)
 h_pfo_neut_eta_v_phi= TH2D("h_pfo_neut_eta_v_phi","h_pfo_neut_eta_v_phi",20,-4,4,20,-3.5,3.5)
  
-        #Electrons
+#Electrons
 h_pfo_ele_theta = TH1D("h_pfo_ele_theta","h_pfo_ele_theta",100,0,10)
 h_pfo_ele_eta = TH1D("h_pfo_ele_eta","h_pfo_ele_eta",100,-4,4)
 h_pfo_ele_pT = TH1D("h_pfo_ele_pT","h_pfo_ele_pT",100,-10,1200)
 h_pfo_ele_phi=TH1D("h_pfo_ele_phi","h_pfo_ele_phi",100,-4,4)
 h_pfo_ele_eta_v_phi= TH2D("h_pfo_ele_eta_v_phi","h_pfo_ele_eta_v_phi",15,-4,4,15,-4,4)
        
-        #Pions
-h_pfo_pion_eta = TH1D("h_pfo_pion_eta","h_pfo_pion_eta",100,0,10)
-h_pfo_pion_pT = TH1D("h_pfo_pion_pT","h_pfo_pion_pT",100,0,10)
-h_pfo_pion_phi=TH1D("h_pfo_pion_phi","h_pfo_pion_phi",100,0,10) 
+#Resolution Hists
+h_ele_etaRes=TH1D("h_ele_etaRes","h_ele_etaRes",50,-4,4)
+h_ele_phiRes=TH1D("h_ele_phiRes","h_ele_phiRes",50,-4,4)
+h_ele_thetaRes=TH1D("h_ele_thetaRes","h_ele_thetaRes",50,-4,4)
+h_ele_pTRes=TH1D("h_ele_pTRes","h_ele_pTRes",50,-100,1200)
+
 
 
 #Create a reader and open an LCIO file
 #Find all files matching the directory pattern
-
-
 histos_list = [h_truth_Rprod, h_truth_pT, h_truth_theta,
                h_trk_pT, h_trk_theta, h_trk_Rprod,
                h_ele_pT, h_ele_theta, h_ele_Rprod, h_all_p]
-
-for histo in histos_list:
-    histo.SetDirectory(0)
-
-
-
-
 
 reader = IOIMPL.LCFactory.getInstance().createLCReader()
 directory_pattern ='/collab/project/snowmass21/data/muonc/fmeloni/LegacyProductions/before29Jul23/DataMuC_MuColl_v1/electronGun/reco/electronGun_reco*'
@@ -80,10 +73,7 @@ reader.open(file_paths)
 pfo_array=[]
 truth_array=[]
 pdgid11=0
-pdgid22=0
 pdgid2112=0
-pdgid2212=0
-pdgid211=0
 Bfield = 3.56  # T
 count=0
 elecount=0
@@ -98,8 +88,8 @@ for ievt, event in enumerate(reader):
     print("Processing event " + str(ievt))
     pfoCollection = event.getCollection('PandoraPFOs')
     trkCollection = event.getCollection('SiTracks_Refitted')    
-   # relationCollection = event.getCollection('MCParticle_SiTracks_Refitted')
-   # relation = UTIL.LCRelationNavigator(relationCollection)
+#    relationCollection = event.getCollection('MCParticle_SiTracks_Refitted')
+#    relation = UTIL.LCRelationNavigator(relationCollection)
 
     mcpCollection = event.getCollection('MCParticle')
 
@@ -114,7 +104,6 @@ for ievt, event in enumerate(reader):
 
         if fabs(charge) > 0:
             if fabs(mcp.getPDG()) == 11:
-                elecount2+=1
                 vx = mcp.getVertex()
                 rprod = sqrt(vx[0]*vx[0]+vx[1]*vx[1])
                 dp3 = mcp.getMomentum()
@@ -127,7 +116,6 @@ for ievt, event in enumerate(reader):
 
                 if tlv.Perp() > 1 and not mcp.isDecayedInTracker() and goodtheta:
                     
-                    elecount+=1
                     h_truth_Rprod.Fill(rprod)
                     h_truth_pT.Fill(tlv.Perp())
                     h_truth_theta.Fill(tlv.Theta())
@@ -162,7 +150,7 @@ for ievt, event in enumerate(reader):
         if pfo.getType() not in pfo_array:      
             pfo_array.append(pfo.getType())
 
-#electrons, I dont really need this statement(see line 125)  but it is here to keep myself consistent.
+#electrons
         if fabs(pfo.getType()) == 11:
             pdgid11 = pdgid11+1
             dp3_ele=pfo.getMomentum() 
@@ -174,11 +162,14 @@ for ievt, event in enumerate(reader):
             h_pfo_ele_phi.Fill(tlv_pfo_ele.Phi())
             h_pfo_ele_eta_v_phi.Fill(tlv_pfo_ele.Eta(),tlv_pfo_ele.Phi())
             h_pfo_ele_theta.Fill(tlv_pfo_ele.Theta())        
-        #photons
-        if fabs(pfo.getType()) == 22:
-            pdgid22 = pdgid22+1
 
-        #neutrons
+            h_ele_etaRes.Fill(tlv_pfo_ele.Eta() - tlv.Eta())
+            h_ele_phiRes.Fill(tlv_pfo_ele.Phi() - tlv.Phi())
+            h_ele_thetaRes.Fill(tlv_pfo_ele.Theta() - tlv.Theta())
+            h_ele_pTRes.Fill(tlv_pfo_ele.Perp() - tlv.Perp())
+
+
+#neutrons
         if fabs(pfo.getType()) == 2112:
             pdgid2112 = pdgid2112+1
             dp3_neut = pfo.getMomentum()
@@ -189,24 +180,16 @@ for ievt, event in enumerate(reader):
             h_pfo_neut_eta.Fill(tlv.Eta())
             h_pfo_neut_phi.Fill(tlv.Phi())        
             h_pfo_neut_eta_v_phi.Fill(tlv_pfo_neut.Eta(),tlv_pfo_neut.Phi())
-        #protons       
-        if fabs(pfo.getType()) == 2212:
-           pdgid2212 = pdgid2212+1
-        
-
-        #pions
-        if fabs(pfo.getType()) == 211:
-            pdgid211=pdgid211+1
-
-            dp3_pion = pfo.getMomentum()
-            tlv_pfo_pion = TLorentzVector()
-            tlv_pfo_pion.SetPxPyPzE(dp3_pion[0], dp3_pion[1], dp3_pion[2], pfo.getEnergy())
-           
-            h_pfo_pion_pT.Fill(tlv.Perp())
-            h_pfo_pion_eta.Fill(tlv.Eta())
-            h_pfo_pion_phi.Fill(tlv.Phi())        
 
 #Draw Histogram 
+
+#Res Plots
+
+#h_ele_etaRes.Draw()
+#h_ele_phiRes.Draw()
+#h_ele_thetaRes.Draw()
+h_ele_pTRes.Draw()
+
 
 h_all_p.GetXaxis().SetTitle("PFO Particle pdgID")
 h_all_p.GetYaxis().SetTitle("Count")
@@ -230,7 +213,7 @@ h_pfo_ele_theta.SetTitle("PFO electron theta")
 h_pfo_ele_theta.GetYaxis().SetTitle("")
 h_pfo_ele_theta.GetXaxis().SetTitle("PFO Particle theta")
 h_pfo_ele_theta.GetXaxis().SetNdivisions(505)
-h_pfo_ele_theta.Draw()
+#h_pfo_ele_theta.Draw()
 
 h_pfo_ele_eta.SetTitle("PFO electron eta")
 h_pfo_ele_eta.GetYaxis().SetTitle("")
@@ -258,7 +241,7 @@ h_pfo_ele_eta_v_phi.GetXaxis().SetTitle("PFO Electron Eta")
 
 
 reader.close()
-canvas.SaveAs("pfo_ele_theta.png")
+canvas.SaveAs("h_ele_pTRes.png")
 # write histograms
 #output_file = TFile(options.outDir + "ntup_elePFO_reco.root", 'RECREATE')
 #for histo in histos_list:
